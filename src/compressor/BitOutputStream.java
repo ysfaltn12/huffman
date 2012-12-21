@@ -1,3 +1,4 @@
+package compressor;
 import java.io.*;
 
 /**

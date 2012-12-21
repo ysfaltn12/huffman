@@ -1,9 +1,11 @@
+package util;
 
 import java.io.*;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.ProgressMonitorInputStream;
+import compressor.BitInputStream;
 
 public class Diff
 {

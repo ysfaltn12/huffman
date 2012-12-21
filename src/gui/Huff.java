@@ -1,3 +1,7 @@
+package gui;
+import compressor.IHuffProcessor;
+import compressor.SimpleHuffProcessor;
+
 /**
  * This software can compress (and uncompress) files using
  * <a href="http://en.wikipedia.org/wiki/Huffman_coding">Huffman coding</a>

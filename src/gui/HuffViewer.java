@@ -1,4 +1,6 @@
+package gui;
 import javax.swing.*;
+import compressor.IHuffProcessor;
 
 import java.awt.BorderLayout;
 import java.awt.event.*;

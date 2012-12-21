@@ -1,3 +1,4 @@
+package compressor;
 
 /**
  * The interface for the model that can be attached
@@ -10,6 +11,7 @@
  *
  */
 
+import gui.HuffViewer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

@@ -1,3 +1,4 @@
+package compressor;
 
 /**
  * Global constants used in Huff/Unhuff. Clients needing these

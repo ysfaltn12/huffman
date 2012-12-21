@@ -1,3 +1,4 @@
+package compressor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -5,17 +6,16 @@ import java.util.PriorityQueue;
 
 
 /**
- * Mediates between GUI input and compression/uncompression logic.
+ * Class that does all compression and uncompression work.
  * 
  * @author Volodymyr Zavidovych
  * 
  */
-public class SimpleHuffProcessor implements IHuffProcessor {
+public class HuffCompressor implements IHuffConstants {
 
-    private static final int SUCCESS = 1;
     private static final int NON_LEAF_NODE_VALUE = -1;
 
-    private HuffViewer myViewer;
+    private SimpleHuffProcessor myProcessor;
     private BitInputStream myInput;
     private BitOutputStream myOutput;
     private int[] myFrequency;
@@ -23,83 +23,74 @@ public class SimpleHuffProcessor implements IHuffProcessor {
     private TwoWayMap<Integer, String> myHuffMap;
     private int myInputSize;
     private int myOutputSize;
-    private HuffCompressor myCompressor = new HuffCompressor();
 
-    public int preprocessCompress (InputStream in) throws IOException {
-        try {
-            myCompressor.preprocess(in);
-            
-            myInput = new BitInputStream(in);
-            countFrequency();
-            buildHuffTree();
-            buildHuffMap();
-            myInput.close();
-            showString("Finished preprocessing");
-            return SUCCESS;
-        }
-        catch (IOException e) {
-            throw new IOException("preprocess failed");
-        }
-    }
-
-    public int compress (InputStream in, OutputStream out, boolean force) throws IOException {
-        try {
-            myCompressor.compress(in, out);
-            myInputSize = 0;
-            myOutputSize = 0;
-            myInput = new BitInputStream(in);
-            myOutput = new BitOutputStream(out);
-            writeHeader();
-            writeContent();
-            writeEOF();
-            myInput.close();
-            myOutput.close();
-            showString("Finished compression");
-            if (myCompressor.wasUseless() && !force) {
-            if (myInputSize <= myOutputSize && !force) {
-                String msg =
-                        "Compression uses " + (myOutputSize - myInputSize) +
-                                " more bits. Use 'force compression' to proceed anyways.";
-                showString(msg);
-                throw new IOException(msg);
-            }
-            return SUCCESS;
-        }
-        catch (IOException e) {
-            throw new IOException("compress failed: " + e.getMessage());
-        }
-    }
-    
-    public int uncompress (InputStream in, OutputStream out) throws IOException {
-        try {
-            myCompressor.uncompress(in, out);
-            myInput = new BitInputStream(in);
-            myOutput = new BitOutputStream(out);
-            readHeader();
-            buildHuffTree();
-            buildHuffMap();
-            translateContent();
-            showString("Finished uncompression");
-            return SUCCESS;
-        }
-        catch (IOException e) {
-            throw new IOException("uncompress failed: " + e.getMessage());
-        }
-    }
-    
     /**
-     * Show string in the display panel.
+     * Constructor
      * 
-     * @param s String to show
+     * @param processor Processor - owner of this compressor
      */
-    private void showString (String s) {
-        myViewer.update(s);
+    public HuffCompressor (SimpleHuffProcessor processor) {
+       myProcessor = processor;
     }
-    
-    public void setViewer (HuffViewer viewer) {
-        myViewer = viewer;
+
+    /**
+     * Preprocess input before compression
+     * 
+     * @param in Input stream
+     * @throws IOException
+     */
+    public void preprocess (InputStream in) throws IOException {
+        myInput = new BitInputStream(in);
+        countFrequency();
+        buildHuffTree();
+        buildHuffMap();
+        myInput.close();
     }
-    
+
+    /**
+     * Commence compression
+     * 
+     * @param in Input stream
+     * @param out Output stream
+     * @throws IOException
+     */
+    public void compress (InputStream in, OutputStream out) throws IOException {
+        myInputSize = 0;
+        myOutputSize = 0;
+        myInput = new BitInputStream(in);
+        myOutput = new BitOutputStream(out);
+        writeHeader();
+        writeContent();
+        writeEOF();
+        myInput.close();
+        myOutput.close();
+    }
+
+    /**
+     * How many bits compression saved
+     * 
+     * @return input size minus output size
+     */
+    public int bitsCompressed () {
+        return myInputSize - myOutputSize;
+    }
+
+    /**
+     * Commence uncompression
+     * 
+     * @param in Input stream
+     * @param out Output stream
+     * @throws IOException
+     */
+    public void uncompress (InputStream in, OutputStream out) throws IOException {
+        myInput = new BitInputStream(in);
+        myOutput = new BitOutputStream(out);
+        readHeader();
+        buildHuffTree();
+        buildHuffMap();
+        translateContent();
+    }
+
     private void countFrequency () throws IOException {
         myFrequency = new int[ALPH_SIZE];
         int inbits;
@@ -111,7 +102,7 @@ public class SimpleHuffProcessor implements IHuffProcessor {
     private void buildHuffTree () {
         PriorityQueue<TreeNode> huffForest = buildForest();
         myHuffTree = reduceToSingleTree(huffForest);
-        showString("Finished building Huffman tree");
+        myProcessor.showString("Finished building Huffman tree");
     }
 
     private PriorityQueue<TreeNode> buildForest () {
@@ -143,7 +134,7 @@ public class SimpleHuffProcessor implements IHuffProcessor {
         myHuffMap = new TwoWayMap<Integer, String>();
         traverse(myHuffTree.myLeft, "0");
         traverse(myHuffTree.myRight, "1");
-        showString("Finished building map");
+        myProcessor.showString("Finished building map");
     }
 
     private void traverse (TreeNode node, String path) {
@@ -158,8 +149,6 @@ public class SimpleHuffProcessor implements IHuffProcessor {
         }
     }
 
-    
-
     private void writeHeader () {
         myOutput.writeBits(BITS_PER_INT, MAGIC_NUMBER);
         myOutputSize += BITS_PER_INT;
@@ -171,7 +160,7 @@ public class SimpleHuffProcessor implements IHuffProcessor {
         // end of frequency counts
         myOutput.writeBits(BITS_PER_INT, STORE_COUNTS);
         myOutputSize += BITS_PER_INT;
-        showString("Finished writing header");
+        myProcessor.showString("Finished writing header");
     }
 
     private void writeContent () throws IOException {
@@ -180,7 +169,7 @@ public class SimpleHuffProcessor implements IHuffProcessor {
             myInputSize += BITS_PER_WORD;
             writeBitString(myHuffMap.getForward(inbits));
         }
-        showString("Finished writing content");
+        myProcessor.showString("Finished writing content");
     }
 
     private void writeEOF () {
@@ -193,7 +182,7 @@ public class SimpleHuffProcessor implements IHuffProcessor {
             myOutput.writeBits(1, bit);
             myOutputSize += 1;
         }
-    }    
+    }
 
     private void readHeader () throws IOException {
         // check magic number
@@ -208,11 +197,11 @@ public class SimpleHuffProcessor implements IHuffProcessor {
         // read end of counts
         int endOfCounts = myInput.readBits(BITS_PER_INT);
         if (endOfCounts != STORE_COUNTS) { throw new IOException("invalid header"); }
-        showString("Finished reading header");
+        myProcessor.showString("Finished reading header");
     }
 
     private void translateContent () throws IOException {
-        showString("Started writing uncompressed file");
+        myProcessor.showString("Started writing uncompressed file");
         String nextBitSeq = "";
         while (true) {
             int nextBit = myInput.readBits(1);

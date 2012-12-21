@@ -1,5 +1,8 @@
+package gui;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import compressor.IHuffProcessor;
+import compressor.SimpleHuffProcessor;
 
 import java.io.*;
 import java.nio.ByteBuffer;
